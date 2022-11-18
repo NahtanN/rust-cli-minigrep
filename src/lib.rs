@@ -3,7 +3,7 @@
 use std::{
     env,
     error::Error,
-    fs::{self, File, OpenOptions},
+    fs::{self, OpenOptions},
     io::Write,
 };
 
@@ -71,21 +71,11 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     };
 
     if config.args.save_output {
-        fs::remove_file("output.txt")?;
+        save_output(&results)?;
     }
 
     for line in results {
         println!("{line}");
-
-        if config.args.save_output {
-            let mut file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create(true)
-                .open("output.txt")?;
-
-            file.write_fmt(format_args!("{line}\n"))?;
-        }
     }
 
     Ok(())
@@ -114,6 +104,22 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a st
     }
 
     results
+}
+
+fn save_output(results: &Vec<&str>) -> Result<(), Box<dyn Error>> {
+    fs::remove_file("output.txt").ok();
+
+    for line in results {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open("output.txt")?;
+
+        file.write_fmt(format_args!("{line}\n"))?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -145,5 +151,22 @@ Trust me.";
             vec!["Rust:", "Trust me."],
             search_case_insensitive(query, contents)
         )
+    }
+
+    #[test]
+    fn create_file_and_save_output() {
+        let results = vec![
+            "Lorem ipsum dolor sit amet",
+            "consectetur adipiscing elit",
+            "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua",
+            "sunt in culpa qui officia",
+        ];
+
+        let response = save_output(&results);
+
+        match response {
+            Ok(_) => (),
+            Err(error) => panic!("Problem on save_output: {}", error),
+        }
     }
 }
